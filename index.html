@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertidor de versiones .catrobat</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #a8f0c6; text-align: center; padding: 20px; }
+        h2 { color: #2c5e4e; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); display: inline-block; }
+        select, input, button { margin: 10px; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #2c5e4e; }
+        button { background-color: #2c5e4e; color: white; cursor: pointer; }
+        button:hover { background-color: #1e4a3c; }
+        .info { margin-top: 20px; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; }
+    </style>
+</head>
+<body>
+    <h2>Convertidor de versiones .catrobat</h2>
+    <p>Esta herramienta te permite modificar la versión de un archivo .catrobat para hacerlo compatible con versiones anteriores o más recientes.</p>
+
+    <div class="container">
+        <label for="fileInput">Selecciona un archivo .catrobat:</label>
+        <input type="file" id="fileInput" accept=".catrobat"><br>
+
+        <label for="versionActual">Versión actual del proyecto:</label>
+        <select id="versionActual">
+            <option value="1.3.0">1.3.0</option>
+            <option value="1.2.4">1.2.4</option>
+        </select><br>
+
+        <label for="versionNueva">Modificar a versión:</label>
+        <select id="versionNueva">
+            <option value="1.3.0">1.3.0</option>
+            <option value="1.2.4">1.2.4</option>
+        </select><br>
+
+        <button onclick="processFile()">Modificar y Descargar</button>
+    </div>
+
+    <div class="info">
+        <h3>¿Cómo funciona?</h3>
+        <p>El archivo .catrobat contiene un archivo interno llamado <b>code.xml</b>. Esta herramienta busca y modifica la versión dentro de ese archivo. <br>
+        - Si seleccionas una versión diferente en ambas listas, la herramienta cambiará los valores correspondientes. <br>
+        - Si intentas convertir el archivo a la misma versión, recibirás un aviso.</p>
+    </div>
+
+    <script>
+        async function processFile() {
+            const fileInput = document.getElementById("fileInput").files[0];
+            const versionActual = document.getElementById("versionActual").value;
+            const versionNueva = document.getElementById("versionNueva").value;
+
+            if (!fileInput) return alert("Selecciona un archivo .catrobat");
+            if (versionActual === versionNueva) return alert("No puedes convertir a la misma versión.");
+
+            const zip = await JSZip.loadAsync(fileInput);
+            if (!zip.files["code.xml"]) return alert("No se encontró code.xml en el archivo.");
+
+            let codeXml = await zip.files["code.xml"].async("string");
+            let lines = codeXml.split("\n");
+
+            if (lines.length > 9) {
+                lines[7] = lines[7].replace(versionActual, versionNueva);
+                lines[8] = lines[8].replace(/1\.\d+/, versionNueva === "1.3.0" ? "1.13" : "1.11");
+            } else {
+                return alert("El archivo code.xml no tiene suficientes líneas.");
+            }
+
+            zip.file("code.xml", lines.join("\n"));
+            const modifiedBlob = await zip.generateAsync({ type: "blob" });
+
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(modifiedBlob);
+            a.download = fileInput.name.replace(/\.zip$/, "").replace(".catrobat", "") + ".catrobat";
+            a.click();
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
